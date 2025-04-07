@@ -2,18 +2,18 @@ import tensorflow as tf
 import numpy as np
 import cv2
 
-def objection(frame):
-    img = cv2.imread(frame, cv2.IMREAD_COLOR)
-    IMG_HEIGHT, IMG_WIDTH = img.shape[:2]
+def objection(frame):  # Теперь frame принимает numpy array (кадр видео)
+    # Убрали cv2.imread, используем переданный кадр напрямую
+    IMG_HEIGHT, IMG_WIDTH = frame.shape[:2]
     
     pad = round(abs(IMG_WIDTH - IMG_HEIGHT) / 2)
     x_pad = pad if IMG_HEIGHT > IMG_WIDTH else 0
     y_pad = pad if IMG_WIDTH > IMG_HEIGHT else 0
-    img_padded = cv2.copyMakeBorder(img, top=y_pad, bottom=y_pad, left=x_pad, right=x_pad,
+    img_padded = cv2.copyMakeBorder(frame, top=y_pad, bottom=y_pad, left=x_pad, right=x_pad,
                                 borderType=cv2.BORDER_CONSTANT, value=(0, 0, 0))
     IMG_HEIGHT, IMG_WIDTH = img_padded.shape[:2]
     
-    img_rgb = cv2.cvtColor(img_padded, cv2.COLOR_BGR2RGB)
+    img_rgb = cv2.cvtColor(img_padded, cv2.COLOR_BGR2RGB)  # Конвертация BGR -> RGB
     img_resized = cv2.resize(img_rgb, (width, height), interpolation=cv2.INTER_AREA)
     input_data = np.expand_dims(img_resized / 255, axis=0).astype('float32')
 
@@ -49,18 +49,18 @@ def objection(frame):
         x, y, w, h = boxes[indice]
         class_name = labels[classes[indice]]
         score = box_confidences[indice] * class_probs[indice]
-        if(class_name == "boat" and score > 0.6):
+        if class_name == "boat" and score > 0.6:
             return 1
         
-    print("No boats found")
     return 0
 
+# Остальной код без изменений
 BOX_THRESHOLD = 0.5
 CLASS_THRESHOLD = 0.5
 LABEL_SIZE = 0.5
 RUNTIME_ONLY = True
 LABEL_MAP = './labelmap.txt'
-TF_LITE_MODEL = './lite-model_yolo-v5-tflite_tflite_model_1.tflite' #model path
+TF_LITE_MODEL = './lite-model_yolo-v5-tflite_tflite_model_1.tflite'
 interpreter = tf.lite.Interpreter(model_path=TF_LITE_MODEL)
 interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
