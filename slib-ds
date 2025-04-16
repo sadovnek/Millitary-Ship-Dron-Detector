@@ -1,8 +1,85 @@
+import cv2
+import numpy as np
+from tflite_runtime.interpreter import Interpreter
+
+class ShipDetector:
+    def __init__(self, TF_LITE_MODEL, LABEL_MAP, THRESHOLD):
+        self.TF_LITE_MODEL = TF_LITE_MODEL
+        self.LABEL_MAP = LABEL_MAP
+        self.THRESHOLD = THRESHOLD
+        self.interpreter = Interpreter(model_path=TF_LITE_MODEL)
+        self.interpreter.allocate_tensors()
+        self.input_details = self.interpreter.get_input_details()
+        self.output_details = self.interpreter.get_output_details()
+        _, self.INPUT_HEIGHT, self.INPUT_WIDTH, _ = self.input_details[0]['shape']
+        with open(LABEL_MAP, 'r') as f:
+            self.labels = [line.strip() for line in f.readlines()]
+    
+    def process(self, frame):
+        original_h, original_w = frame.shape[:2]
+        pad = abs(original_w - original_h) // 2
+        x_pad = pad if original_h > original_w else 0
+        y_pad = pad if original_w > original_h else 0
+        frame_padded = cv2.copyMakeBorder(frame, y_pad, y_pad, x_pad, x_pad, cv2.BORDER_CONSTANT)
+        padded_h, padded_w = frame_padded.shape[:2]
+        
+        frame_rgb = cv2.cvtColor(frame_padded, cv2.COLOR_BGR2RGB)
+        frame_resized = cv2.resize(frame_rgb, (self.INPUT_WIDTH, self.INPUT_HEIGHT))
+        input_data = np.expand_dims(frame_resized, axis=0).astype(np.uint8)
+        
+        self.interpreter.set_tensor(self.input_details[0]['index'], input_data)
+        self.interpreter.invoke()
+        
+        boxes = self.interpreter.get_tensor(self.output_details[0]['index'])[0]
+        classes = self.interpreter.get_tensor(self.output_details[1]['index'])[0]
+        scores = self.interpreter.get_tensor(self.output_details[2]['index'])[0]
+        
+        detections = []
+        for score, box, class_id in zip(scores, boxes, classes):
+            if score < self.THRESHOLD or self.labels[int(class_id)] != 'boat':
+                continue
+                
+            y1 = int(box[0] * padded_h) - y_pad
+            x1 = int(box[1] * padded_w) - x_pad
+            y2 = int(box[2] * padded_h) - y_pad
+            x2 = int(box[3] * padded_w) - x_pad
+            
+            x1 = max(0, x1)
+            y1 = max(0, y1)
+            x2 = min(original_w, x2)
+            y2 = min(original_h, y2)
+            
+            if x1 >= x2 or y1 >= y2:
+                continue
+                
+            detections.append({
+                'bbox': (x1, y1, x2, y2),
+                'score': score
+            })
+        return detections if detections else None
+
 class ShipTracker:
     def __init__(self, frame, bbox):
         self.tracker = cv2.TrackerCSRT_create()
-        self.tracker.init(frame, bbox)
-
-    def tracking(self, frame):
+        self.tracker.init(frame, (bbox[0], bbox[1], bbox[2]-bbox[0], bbox[3]-bbox[1]))
+    
+    def update(self, frame):
         success, bbox = self.tracker.update(frame)
-        return success, bbox
+        if success:
+            return (int(bbox[0]), int(bbox[1]), int(bbox[0]+bbox[2]), int(bbox[1]+bbox[3])
+        return None
+
+class Painter:
+    def __init__(self):
+        self.colors = {
+            'detect': (0, 255, 0),
+            'track': (0, 0, 255)
+        }
+    
+    def draw_boxes(self, frame, items, mode='detect'):
+        for item in items:
+            x1, y1, x2, y2 = item['bbox']
+            color = self.colors[mode]
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(frame, f"{item['score']:.2f}", (x1, y1-5), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
