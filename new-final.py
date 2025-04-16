@@ -7,8 +7,8 @@ from slib import ShipDetector, ShipTracker
 # Блокировки и общие ресурсы
 frame_lock = Lock()
 current_frame = None
+processed_frame = None  # Добавлен отдельный кадр для отображения
 tracker = None
-result = -1
 height = 0
 width = 0
 state = 0  # 0 - detection, 1 - tracking
@@ -21,7 +21,7 @@ detector = ShipDetector(
 )
 
 def track():
-    global state, tracker, current_frame
+    global state, tracker, current_frame, processed_frame
     while True:
         with frame_lock:
             local_frame = current_frame.copy() if current_frame is not None else None
@@ -30,13 +30,16 @@ def track():
             success, bbox = tracker.tracking(local_frame)
             if success:
                 x, y, w, h = [int(v) for v in bbox]
-                print("TRACKING")
-                cv2.rectangle(current_frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                # Отрисовка на копии кадра
+                temp_frame = local_frame.copy()
+                cv2.rectangle(temp_frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                with frame_lock:
+                    processed_frame = temp_frame
         
         time.sleep(0.01)
 
 def detect():
-    global state, tracker, current_frame, result
+    global state, tracker, current_frame, processed_frame
     while True:
         with frame_lock:
             local_frame = current_frame.copy() if current_frame is not None else None
@@ -48,8 +51,12 @@ def detect():
                 w = x2 - x1
                 h = y2 - y1
                 with frame_lock:
+                    # Обновление отрисованного кадра сразу после детекции
+                    temp_frame = local_frame.copy()
+                    cv2.rectangle(temp_frame, (x1, y1, x2, y2), (255, 0, 0), 2)
+                    processed_frame = temp_frame
                     tracker = ShipTracker(local_frame, (x1, y1, w, h))
-                    state = 1  # Переключаем в режим трекинга
+                    state = 1
         
         time.sleep(0.01)
 
@@ -71,11 +78,13 @@ while True:
 
     with frame_lock:
         current_frame = frame.copy()
+        # Если нет обработки - отображаем исходный кадр
+        if processed_frame is None:
+            processed_frame = current_frame.copy()
 
-    # Отображение кадра с обработкой
-    display_frame = current_frame.copy()
-    print(result,state)
-    cv2.imshow('Boat Detection', display_frame)
+    # Отображение обработанного кадра
+    cv2.imshow('Boat Detection', processed_frame)
+    print(result, state)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
