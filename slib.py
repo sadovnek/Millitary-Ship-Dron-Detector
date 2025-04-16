@@ -65,4 +65,4 @@ class ShipDetector():
 
             detections.append((x1, y1, x2, y2, float(score)))
 
-        return detections if detections else []
+        return detections if detections else -1
