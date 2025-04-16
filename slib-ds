@@ -1,0 +1,8 @@
+class ShipTracker:
+    def __init__(self, frame, bbox):
+        self.tracker = cv2.TrackerCSRT_create()
+        self.tracker.init(frame, bbox)
+
+    def tracking(self, frame):
+        success, bbox = self.tracker.update(frame)
+        return success, bbox
