@@ -82,13 +82,18 @@ class ShipTracker():
         self.tracker.init(frame, bbox)
     
     def tracking(self,frame,bbox):
+        bbox[0] -= 100
+        bbox[1] -= 100
+        bbox[2] -= 100
+        bbox[3] -= 100
         success, bbox = self.tracker.update(frame)
         #x, y, w, h = tuple(map(int, bbox))
         w, h, x, y = tuple(map(int, bbox))
-        center_x = (w - x) // 2
+        return x,y,w,h
+        '''center_x = (w - x) // 2
         center_y = (h + y) // 2
         cv2.rectangle(frame, (x, y), (w, h), (100, 10, 50), 5)
-        '''cv2.circle(frame, (center_x, center_y), 10, (0, 0, 255), -1)
+        cv2.circle(frame, (center_x, center_y), 10, (0, 0, 255), -1)
         deviation_x = self.width//2 - center_x
         deviation_y = self.height//2 - center_y
         cv2.putText(frame, f"delta X: {deviation_x}", (center_x + 50, self.height//2), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
@@ -99,10 +104,16 @@ class ShipTracker():
     
     
     
+class painter():
     
-    
-    
-    
+    def __init__(self):
+        pass
+        
+    def paint(self,frame,state,x,y,w,h):
+        if state == 0:
+            cv2.rectangle(frame, (x, y), (w, h), (100, 10, 50), 5)
+        elif state == 1:
+            cv2.circle(frame, (w//2, h//2), radius=10, color=(0,255,0), thickness=-1)
     
     
     
