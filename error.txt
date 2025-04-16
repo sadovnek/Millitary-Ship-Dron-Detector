@@ -1,16 +1,1 @@
-/home/pi/.local/lib/python3.11/site-packages/tensorflow/lite/python/interpreter.py:457: UserWarning:     Warning: tf.lite.Interpreter is deprecated and is scheduled for deletion in
-    TF 2.20. Please use the LiteRT interpreter from the ai_edge_litert package.
-    See the [migration guide](https://ai.google.dev/edge/litert/migration)
-    for details.
-    
-  warnings.warn(_INTERPRETER_DELETION_WARNING)
-INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
-qt.qpa.plugin: Could not find the Qt platform plugin "wayland" in "/usr/local/lib/python3.11/dist-packages/cv2/qt/plugins"
-Traceback (most recent call last):
-  File "/home/pi/project/main.py", line 14, in <module>
-    result = dtc.objection(frame)  # Вызываем функцию один раз
-             ^^^^^^^^^^^^^^^^^^^^
-  File "/home/pi/project/detection.py", line 6, in objection
-    img = cv2.imread(frame, cv2.IMREAD_COLOR)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TypeError: Can't convert object to 'str' for 'filename'
+так давай для треккинга брать маленький прямоуголиник который находится где ниже центра найденого корабля то есть в треккере переданные координаты должны сами уменьшаться длина этого прямоугольника где то 1/3 то общей и ширина такая же а расположен его координаты немного ниже центра найденого обекта это должно улучшить треккер
