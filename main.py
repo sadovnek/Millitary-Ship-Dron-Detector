@@ -1,65 +1,67 @@
-from slib import ShipDetector
-from slib import ShipTracker
-from slib import painter
+from slib import ShipDetector, ShipTracker, Painter
+import cv2
 import threading
 import time
-import cv2
 
-Detector = ShipDetector(
-    TF_LITE_MODEL = '/home/pi/mind/models/lite-model_efficientdet_lite0_detection_metadata_1.tflite',
-    LABEL_MAP = '/home/pi/mind/labelmap.txt',
-    THRESHOLD = 0.35
+detector = ShipDetector(
+    TF_LITE_MODEL='/home/pi/mind/models/lite-model_efficientdet_lite0_detection_metadata_1.tflite',
+    LABEL_MAP='/home/pi/mind/labelmap.txt',
+    THRESHOLD=0.35
 )
+painter = Painter()
+cap = cv2.VideoCapture("/home/pi/mind/videos/fregate-move.mp4")
+trackers = []
+current_detections = []
+lock = threading.Lock()
 
-draw = painter()
-state = -1
-video_path = "/home/pi/mind/videos/fregate-move.mp4";
-cap = cv2.VideoCapture(video_path)
-height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-result = [0,0,0,0]
-flag = -1
-conf = []
-print("H" + ":" + str(height) + " " + "W" + ":" + str(width))
-ret, frame = cap.read()
-
-def find():
-    global state, result
+def detection_task():
+    global current_detections
     while True:
-        if state == 0:
-            result = Detector.process(frame)
-            if result != -1:
-                state = 1
-                Tracker = ShipTracker(frame,result,width,height)
+        ret, frame = cap.read()
+        if not ret:
+            break
+        with lock:
+            detections = detector.process(frame)
+            if detections:
+                current_detections = detections
+                trackers.clear()
+                for d in detections:
+                    trackers.append(ShipTracker(frame, d['bbox']))
         time.sleep(0.1)
 
-def pathing():
-    global state, result
-    time.sleep(1)
-    state = 0
+def tracking_task():
+    global current_detections
     while True:
-        if state == 1:
-            Tracker.tracking(frame,result)
-            
-        time.sleep(0.1)
+        ret, frame = cap.read()
+        if not ret or not trackers:
+            continue
+        updated = []
+        with lock:
+            for tracker in trackers:
+                bbox = tracker.update(frame)
+                if bbox:
+                    updated.append({'bbox': bbox, 'score': None})
+            current_detections = updated
+        time.sleep(0.05)
 
-threading.Thread(target=find, daemon=True).start()
-threading.Thread(target=pathing, daemon=True).start()
+threading.Thread(target=detection_task, daemon=True).start()
+threading.Thread(target=tracking_task, daemon=True).start()
 
 while True:
     ret, frame = cap.read()
     if not ret:
         break
     
-    draw.paint(frame,state,result[0],result[1],result[2],result[3])
-    cv2.imshow('Boat Detection', frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+    with lock:
+        if current_detections:
+            if trackers:  # Если идет трекинг
+                painter.draw_boxes(frame, current_detections, 'track')
+            else:  # Если обнаружение
+                painter.draw_boxes(frame, current_detections, 'detect')
     
+    cv2.imshow('Boat Detection', frame)
+    if cv2.waitKey(1) == ord('q'):
+        break
+
 cap.release()
 cv2.destroyAllWindows()
-print(len(conf))
-print(max(conf))
-conf = sorted(conf)
-conf = conf[::-1]
-print(conf)
