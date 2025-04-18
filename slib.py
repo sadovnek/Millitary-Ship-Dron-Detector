@@ -132,20 +132,45 @@ class YOLODetector:
 
 class ShipTracker:
     
-    def __init__(self,ok,frame,result):
-        # X Y W H
-        scale = 0.2
-        w = max(1,int(result[2]-result[0]) * scale)
-        h = max(1,int(result[3]-result[1]) * scale)
-        x = result[0] + (result[2]-result[0]) // 2
-        y = result[1] + (result[3]-result[1]) // 2
-        self.bbox = (x,y,w,h)
+    def __init__(self, ok, frame, result):
+        # Исходные координаты в формате X1, Y1, X2, Y2
+        x1, y1, x2, y2 = result
+        orig_width = x2 - x1
+        orig_height = y2 - y1
+        
+        # Коэффициенты
+        scale = 0.2  # Уменьшение размера на 80%
+        center_shift_ratio = 0.1  # Смещение центра вниз на 10% высоты
+        
+        # Уменьшенные размеры
+        new_width = max(1, int(orig_width * scale))
+        new_height = max(1, int(orig_height * scale))
+        
+        # Исходный центр
+        orig_center_x = x1 + orig_width // 2
+        orig_center_y = y1 + orig_height // 2
+        
+        # Смещение центра вниз
+        shifted_center_y = orig_center_y + int(orig_height * center_shift_ratio)
+        
+        # Новый верхний левый угол
+        new_x = orig_center_x - new_width // 2
+        new_y = shifted_center_y - new_height // 2
+        
+        # Проверка границ кадра
+        h, w = frame.shape[:2]
+        new_x = max(0, min(new_x, w - new_width))
+        new_y = max(0, min(new_y, h - new_height))
+        
+        self.bbox = (new_x, new_y, new_width, new_height)
         self.tracker = cv2.TrackerKCF_create()
         self.ok = self.tracker.init(frame, self.bbox)
     
     def update(self, ret, frame):
         self.ok = ret
         self.ok, self.bbox = self.tracker.update(frame)
-        # X Y W H
-        return [int(self.bbox[0]),int(self.bbox[1]),int(self.bbox[0] + self.bbox[2]),int(self.bbox[1] + self.bbox[3])]
+        
+        # Возвращаем в формате X1, Y1, X2, Y2
+        x, y, w, h = self.bbox
+        return [int(x), int(y), int(x + w), int(y + h)]
         
