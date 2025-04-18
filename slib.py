@@ -134,13 +134,13 @@ class ShipTracker:
     
     def __init__(self, ok, frame, result):
         # Исходные координаты в формате X1, Y1, X2, Y2
-        x1, y1, x2, y2 = result
+        x1, y1, x2, y2, conf = result
         orig_width = x2 - x1
         orig_height = y2 - y1
         
         # Коэффициенты
-        scale = 0.2  # Уменьшение размера на 80%
-        center_shift_ratio = 0.1  # Смещение центра вниз на 10% высоты
+        scale = 0.25  # Уменьшение размера на 75%
+        center_shift_ratio = 0.05  # Смещение центра вниз на 5% высоты
         
         # Уменьшенные размеры
         new_width = max(1, int(orig_width * scale))
@@ -163,7 +163,7 @@ class ShipTracker:
         new_y = max(0, min(new_y, h - new_height))
         
         self.bbox = (new_x, new_y, new_width, new_height)
-        self.tracker = cv2.TrackerKCF_create()
+        self.tracker = cv2.TrackerCSRT_create()
         self.ok = self.tracker.init(frame, self.bbox)
     
     def update(self, ret, frame):
