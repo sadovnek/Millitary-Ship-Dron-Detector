@@ -1,1 +1,10 @@
-помоги с визуализацией и работой трекера она такая : когда находится корабль с увереностью более чем 0.35 то переводится режим state=2 и поиск кораблей останавливается и по последним results начинается треккинг
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+Traceback (most recent call last):
+  File "/home/pi/garden/main.py", line 30, in <module>
+    detector = YOLODetector(
+               ^^^^^^^^^^^^^
+  File "/home/pi/garden/slib.py", line 67, in __init__
+    self.labels = [line.strip() for line in f.readlines()]
+                                            ^^^^^^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0x90 in position 36: invalid start byte
