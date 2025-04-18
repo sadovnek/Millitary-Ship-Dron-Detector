@@ -134,8 +134,12 @@ class ShipTracker:
     
     def __init__(self,ok,frame,result):
         # X Y W H
-        
-        self.bbox = (result[0],result[1],result[2]-result[0],result[3]-result[1])
+        scale = 0.2
+        w = max(1,int(result[2]-result[0]) * scale)
+        h = max(1,int(result[3]-result[1]) * scale)
+        x = result[0] + (result[2]-result[0]) // 2
+        y = result[1] + (result[3]-result[1]) // 2
+        self.bbox = (x,y,w,h)
         self.tracker = cv2.TrackerKCF_create()
         self.ok = self.tracker.init(frame, self.bbox)
     
