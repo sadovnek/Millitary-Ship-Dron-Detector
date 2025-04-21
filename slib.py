@@ -57,7 +57,7 @@ class ShipDetector:
 
 
 class YOLODetector:
-    def __init__(self, model_path, label_path, box_threshold=0.2, class_threshold=0.25):
+    def __init__(self, model_path, label_path, box_threshold=0.1, class_threshold=0.3):
         self.interpreter = Interpreter(model_path=model_path)
         self.interpreter.allocate_tensors()
         self.input_details = self.interpreter.get_input_details()
@@ -97,7 +97,7 @@ class YOLODetector:
             class_id = np.argmax(class_scores)
             class_prob = class_scores[class_id]
             
-            if class_prob < self.class_threshold or class_id != 1:
+            if class_prob < self.class_threshold or class_id != 0:
                 continue
             
             # Конвертация координат
@@ -127,20 +127,21 @@ class YOLODetector:
                 scores[idx],
                 self.labels[class_ids[idx]]
             ))
-        
+        print(detections)
         return detections
 
 class ShipTracker:
     
     def __init__(self, ok, frame, result):
         # Исходные координаты в формате X1, Y1, X2, Y2
-        x1, y1, x2, y2, conf = result
+        x1, y1, x2, y2, conf, cls = result
+        #x1, y1, x2, y2, conf = result
         orig_width = x2 - x1
         orig_height = y2 - y1
         
         # Коэффициенты
-        scale = 0.25  # Уменьшение размера на 75%
-        center_shift_ratio = 0.05  # Смещение центра вниз на 5% высоты
+        scale = 0.2  # Уменьшение размера на 80%
+        center_shift_ratio = 0.15  # Смещение центра вниз на 15% высоты
         
         # Уменьшенные размеры
         new_width = max(1, int(orig_width * scale))
@@ -163,6 +164,7 @@ class ShipTracker:
         new_y = max(0, min(new_y, h - new_height))
         
         self.bbox = (new_x, new_y, new_width, new_height)
+        #self.bbox = (x1,y1,x2-x1,y2-y1)
         self.tracker = cv2.TrackerCSRT_create()
         self.ok = self.tracker.init(frame, self.bbox)
     
